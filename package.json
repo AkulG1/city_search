@@ -1,0 +1,24 @@
+{
+  "name": "city_search",
+  "version": "1.0.0",
+  "description": "Implements application layer for our problem statement",
+  "main": "server.js",
+  "scripts": {
+    "test": "lets go"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AkulG1/city_search.git"
+  },
+  "author": "Akul Gandotra",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AkulG1/city_search/issues"
+  },
+  "homepage": "https://github.com/AkulG1/city_search#readme",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "mongoose": "^5.12.11"
+  }
+}
