@@ -19,6 +19,7 @@ mongoose.connect(process.env.database, {useNewUrlParser: true, connectWithNoPrim
   app.listen(process.env.PORT,function(err){
     if(err) throw err;
     console.log("Server is Running on port "+ (process.env.PORT));
+    console.log(Object.keys(cityData.schema.obj));
     // cityData.find({weightage:{$exists : true}}, (err, res) => {
     //   res.forEach(res => {
     //     if(res.weightage)
@@ -57,3 +58,24 @@ app.get('/', (req, res) => {
 });
 
 // http://localhost:8983/solr/citydata/select?q=cityName%3ABangalore%20OR%20stateName%3ABangalore%20OR%20aliasCityName%3ABangalore&rows=10&sort=weightage%20desc
+
+app.get('/update/:cityCode', (req, res) => {
+  cityData.findOne({cityCode : req.params.cityCode}, (err, city) => {
+    if(city){
+      if(req.query.cityName)
+        city.cityName = req.query.cityName;
+      if(req.query.stateName)
+        city.stateName = req.query.stateName;
+      if(req.query.locationType)
+        city.locationType = req.query.locationType;
+      if(req.query.aliasCityName)
+        city.aliasCityName = req.query.aliasCityName;
+      if(req.query.weightage && Number.isInteger(req.query.weightage))
+        city.weightage = parseInt(req.query.weightage);
+      city.save((err) => {
+        if(err) throw err;
+      });
+      
+      }
+  });
+});
