@@ -57,7 +57,7 @@ app.get('/', cache, (req, res) => {
   const qcity = req.query.city;
   if(qcity){
     const solrq = 'http://localhost:8983/solr/citydata/select?q=cityName%3A' + qcity + '*%20OR%20stateName%3A' + qcity + '*%20OR%20aliasCityName%3A' + qcity + '*&rows=10&sort=weightage%20asc';
-    console.log(solrq);
+    // console.log(solrq);
     request.get(solrq, function(error, response, body){
       if(error) throw error;
       res.setHeader('Content-Type', 'application/json');
@@ -66,12 +66,12 @@ app.get('/', cache, (req, res) => {
       //console.log(nf)
 
      var obj = JSON.parse(body);//parsing json 
-     console.log(obj);
+    //  console.log(obj);
      var num = obj.response.numFound;//getting the number of result from the response 
       if(num==0){   //if there are no result then probably there is spelling mistake, then we can process for checking spelling
         //spell checklink is here
         const spellchecklink ='http://localhost:8983/solr/citydata/spell?q=' + qcity + '&spellcheck.build=true&spellcheck.collate=true&spellcheck.extendedResults=true&spellcheck.onlyMorePopular=true&spellcheck.reload=true&spellcheck=on';
-        console.log("spell check link: "+spellchecklink);
+        // console.log("spell check link: "+spellchecklink);
         request.get(spellchecklink,function(error,response,body){
           if(error) throw error;
           res.send(body);
@@ -87,9 +87,9 @@ app.get('/', cache, (req, res) => {
         });
       }else{
         var cache_value = JSON.stringify(body);
-        console.log(cache_value);
+        // console.log(cache_value);
         red_client.setex(qcity,3600,cache_value);
-        console.log(JSON.parse(JSON.stringify(body)));
+        // console.log(JSON.parse(JSON.stringify(body)));
         res.setHeader('Content-Type', 'application/json');
         res.end(body);
       }
