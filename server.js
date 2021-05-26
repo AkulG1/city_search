@@ -9,7 +9,7 @@ var redis = require('redis');
 const client = solr.createClient({
   host: '127.0.0.1',
   port: '8983',
-  core: 'cori'
+  core: 'citydata'
 });
 client.autoCommit = true;
 
@@ -37,12 +37,12 @@ app.get('/test/:id/:st', (req,res) => {
 
 function cache(req,res,next){
   const cache_key=req.query.city;
-  console.log("/////////////////////"+cache_key);
   if(cache_key){
   red_client.get(cache_key,(err,data)=>{
     if(err) throw err;
     if(data!=null){
       console.log('Cached...');
+      res.setHeader('Content-Type', 'application/json');
       res.send(JSON.parse(data));
     }
     else{
@@ -56,21 +56,69 @@ function cache(req,res,next){
 app.get('/', cache, (req, res) => {
   const qcity = req.query.city;
   if(qcity){
-    var query = client.createQuery().q({cityName: qcity + ' OR stateName:' + qcity + ' OR aliasCityName:' + qcity}).sort({weightage:'asc'});
-    client.search(query,function(err, obj){
-      if(err){
-        console.log(err);
+    const solrq = 'http://localhost:8983/solr/citydata/select?q=cityName%3A' + qcity + '*%20OR%20stateName%3A' + qcity + '*%20OR%20aliasCityName%3A' + qcity + '*&rows=10&sort=weightage%20asc';
+    console.log(solrq);
+    request.get(solrq, function(error, response, body){
+      if(error) throw error;
+      res.setHeader('Content-Type', 'application/json');
+      // console.log(body);
+      //var nf = body["response"]
+      //console.log(nf)
+
+     var obj = JSON.parse(body);//parsing json 
+     console.log(obj);
+     var num = obj.response.numFound;//getting the number of result from the response 
+      if(num==0){   //if there are no result then probably there is spelling mistake, then we can process for checking spelling
+        //spell checklink is here
+        const spellchecklink ='http://localhost:8983/solr/citydata/spell?q=' + qcity + '&spellcheck.build=true&spellcheck.collate=true&spellcheck.extendedResults=true&spellcheck.onlyMorePopular=true&spellcheck.reload=true&spellcheck=on';
+        console.log("spell check link: "+spellchecklink);
+        request.get(spellchecklink,function(error,response,body){
+          if(error) throw error;
+          res.send(body);
+         // res.end();
+         var suggObj = JSON.parse(body);
+        // console.log(suggObj.spellcheck.suggestions[1].suggestion[0]);
+        if(suggObj.spellcheck.suggestions.length ==0 ){
+          console.log("No results found");
+        }else{
+          var strsuggestion = suggObj.spellcheck.suggestions[1].suggestion[0].word;
+          console.log("Did you mean " + strsuggestion+" ?");
+        }
+        });
       }else{
-        var cache_value = JSON.stringify(obj);
-        //console.log(cache_value);
+        var cache_value = JSON.stringify(body);
+        console.log(cache_value);
         red_client.setex(qcity,3600,cache_value);
-        //console.log(JSON.parse(JSON.stringify(obj)));
+        console.log(JSON.parse(JSON.stringify(body)));
         res.setHeader('Content-Type', 'application/json');
-        res.json(obj);
+        res.end(body);
       }
     });
-  } else res.end();
+  }else{
+    res.json(req.query);
+    res.end();
+  }
 });
+
+
+// app.get('/', cache, (req, res) => {
+//   const qcity = req.query.city;
+//   if(qcity){
+//     var query = client.createQuery().q({cityName: qcity + ' OR stateName:' + qcity + ' OR aliasCityName:' + qcity}).sort({weightage:'asc'});
+//     client.search(query,function(err, obj){
+//       if(err){
+//         console.log(err);
+//       }else{
+//         var cache_value = JSON.stringify(obj);
+//         //console.log(cache_value);
+//         red_client.setex(qcity,3600,cache_value);
+//         //console.log(JSON.parse(JSON.stringify(obj)));
+//         res.setHeader('Content-Type', 'application/json');
+//         res.json(obj);
+//       }
+//     });
+//   } else res.end();
+// });
 // http://localhost:8983/solr/citydata/select?q=cityName%3ABangalore%20OR%20stateName%3ABangalore%20OR%20aliasCityName%3ABangalore&rows=10&sort=weightage%20desc
 
 app.get('/update/:cityCode/', (req, res) => {
@@ -102,6 +150,9 @@ app.get('/update/:cityCode/', (req, res) => {
                 } else {
                    res.send(obj);
                    console.log(obj);
+                   red_client.flushdb( function (err, succeeded) {
+                    console.log(succeeded); // will be true if successfull
+                });
                    client.softCommit(function(err,res){
                     if(err){
                       console.log(err);
