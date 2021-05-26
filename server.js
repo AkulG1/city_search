@@ -57,6 +57,7 @@ app.get('/', (req, res) => {
       }else{
         res.setHeader('Content-Type', 'application/json');
         res.json(obj);
+        console.log(obj.response.docs[0].id);
       }
     });
   }
@@ -80,21 +81,30 @@ app.get('/update/:cityCode/', (req, res) => {
         if(err) throw err;
         else{
           // implement update call
-          client.add({ cityCode : city.cityCode, cityName : city.cityName,  stateName : city.stateName, locationType : city.locationType, aliasCityName : city.aliasCityName, weightage : city.weightage }, function(err,obj){
-            if (err) {
-               console.log(err);
-            } else {
-               res.send(obj);
-               console.log(obj);
-               client.softCommit(function(err,res){
-                if(err){
-                  console.log(err);
-                }else{
-                  console.log(res);
+          var query = client.createQuery().q({cityCode: req.params.cityCode});
+          client.search(query,function(err, obj){
+            if(err){
+              console.log(err);
+            }else{
+              console.log();
+              client.add({ id : obj.response.docs[0].id, cityCode : city.cityCode, cityName : city.cityName,  stateName : city.stateName, locationType : city.locationType, aliasCityName : city.aliasCityName, weightage : city.weightage }, function(err,obj){
+                if (err) {
+                   console.log(err);
+                } else {
+                   res.send(obj);
+                   console.log(obj);
+                   client.softCommit(function(err,res){
+                    if(err){
+                      console.log(err);
+                    }else{
+                      console.log(res);
+                    }
+                 });
                 }
-             });
+              });
             }
           });
+
         }
       });
       
