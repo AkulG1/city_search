@@ -4,8 +4,9 @@ var mongoose = require('mongoose');
 var app = express();
 var cityData = require('./models/cityData');
 var request = require('request');
-const solr = require('solr-client');
 var redis = require('redis');
+
+const solr = require('solr-client');
 const client = solr.createClient({
   host: '127.0.0.1',
   port: '8983',
@@ -24,21 +25,32 @@ mongoose.connect(process.env.database, {useNewUrlParser: true, connectWithNoPrim
     }
   });
 
+
+
   app.listen(process.env.PORT,function(err){
     if(err) throw err;
     console.log("Server is Running on port "+ (process.env.PORT));
+    console.log(Object.keys(cityData.schema.obj));
+    // cityData.find({weightage:{$exists : true}}, (err, res) => {
+    //   res.forEach(res => {
+    //     if(res.weightage)
+    //     {
+    //       res.weightage = parseInt(res.weightage);
+    //       res.save();
+    //     }
+    //   });
+    // });
+    // console.log("done!");
   });
 
   
-  
 app.get('/test/:id/:st', (req,res) => {
-  console.log('Here'); 
+  console.log('Here');
+ 
+  
 });
-
 function cache(req,res,next){
   const cache_key=req.query.city;
-  console.log("/////////////////////"+cache_key);
-  if(cache_key){
   red_client.get(cache_key,(err,data)=>{
     if(err) throw err;
     if(data!=null){
@@ -48,11 +60,8 @@ function cache(req,res,next){
     else{
       next();
     }
-
-  });
-  } else next();
+  })
 }
-
 app.get('/', cache, (req, res) => {
   const qcity = req.query.city;
   if(qcity){
@@ -61,6 +70,7 @@ app.get('/', cache, (req, res) => {
       if(err){
         console.log(err);
       }else{
+        console.log('From solr...');
         var cache_value = JSON.stringify(obj);
         //console.log(cache_value);
         red_client.setex(qcity,3600,cache_value);
@@ -69,7 +79,7 @@ app.get('/', cache, (req, res) => {
         res.json(obj);
       }
     });
-  } else res.end();
+  }
 });
 // http://localhost:8983/solr/citydata/select?q=cityName%3ABangalore%20OR%20stateName%3ABangalore%20OR%20aliasCityName%3ABangalore&rows=10&sort=weightage%20desc
 
@@ -90,30 +100,21 @@ app.get('/update/:cityCode/', (req, res) => {
         if(err) throw err;
         else{
           // implement update call
-          var query = client.createQuery().q({cityCode: req.params.cityCode});
-          client.search(query,function(err, obj){
-            if(err){
-              console.log(err);
-            }else{
-              console.log();
-              client.add({ id : obj.response.docs[0].id, cityCode : city.cityCode, cityName : city.cityName,  stateName : city.stateName, locationType : city.locationType, aliasCityName : city.aliasCityName, weightage : city.weightage }, function(err,obj){
-                if (err) {
-                   console.log(err);
-                } else {
-                   res.send(obj);
-                   console.log(obj);
-                   client.softCommit(function(err,res){
-                    if(err){
-                      console.log(err);
-                    }else{
-                      console.log(res);
-                    }
-                 });
+          client.add({ cityCode : city.cityCode, cityName : city.cityName,  stateName : city.stateName, locationType : city.locationType, aliasCityName : city.aliasCityName, weightage : city.weightage }, function(err,obj){
+            if (err) {
+               console.log(err);
+            } else {
+               res.send(obj);
+               console.log(obj);
+               client.softCommit(function(err,res){
+                if(err){
+                  console.log(err);
+                }else{
+                  console.log(res);
                 }
-              });
+             });
             }
           });
-
         }
       });
       

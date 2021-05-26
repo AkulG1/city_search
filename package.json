@@ -21,6 +21,7 @@
     "express": "^4.17.1",
     "mongoose": "^5.12.11",
     "nodemon": "^2.0.7",
+    "redis": "^3.1.2",
     "request": "^2.88.2",
     "solr-client": "^0.9.0"
   }
