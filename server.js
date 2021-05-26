@@ -4,6 +4,14 @@ var mongoose = require('mongoose');
 var app = express();
 var cityData = require('./models/cityData');
 var request = require('request');
+const solr = require('solr-client');
+const client = solr.createClient({
+  host: '127.0.0.1',
+  port: '8983',
+  core: 'cori'
+});
+client.autoCommit = true;
+
 
 
 mongoose.connect(process.env.database, {useNewUrlParser: true, connectWithNoPrimary: true, useUnifiedTopology: true } , function(err){
@@ -33,30 +41,39 @@ mongoose.connect(process.env.database, {useNewUrlParser: true, connectWithNoPrim
   });
 
   
-
-// app.get('/', (req, res) => {
-//   cityData.find().sort({weightage:-1}).limit(10).exec( (err, cityData) => {
-//     if (err) return next(err);
-//     console.log(cityData);
-//   } ) ;
-// });
+app.get('/test/:id/:st', (req,res) => {
+  console.log('Here');
+  client.add({ id : req.params.id , title_t : req.params.st }, function(err,obj){
+    if (err) {
+       console.log(err);
+    } else {
+       res.send('Solr response:', obj);
+       client.softCommit(function(err,res){
+        if(err){
+          console.log(err);
+        }else{
+          console.log(res);
+        }
+     });
+    }
+  });
+  
+});
 
 app.get('/', (req, res) => {
   const qcity = req.query.city;
   if(qcity){
-    const solrq = 'http://localhost:8983/solr/citydata/select?q=cityName%3A' + qcity + '%20OR%20stateName%3A' + qcity + '%20OR%20aliasCityName%3A' + qcity + '&rows=10&sort=weightage%20asc';
-    console.log(solrq);
-    request.get(solrq, function(error, response, body){
-      if(error) throw error;
-      res.setHeader('Content-Type', 'application/json');
-      res.end(body);
+    var query = client.createQuery().q({cityName: qcity + ' OR stateName:' + qcity + ' OR aliasCityName:' + qcity}).sort({weightage:'asc'});
+    client.search(query,function(err, obj){
+      if(err){
+        console.log(err);
+      }else{
+        res.setHeader('Content-Type', 'application/json');
+        res.json(obj);
+      }
     });
-  }else{
-    res.json(req.query);
-    res.end();
   }
 });
-
 // http://localhost:8983/solr/citydata/select?q=cityName%3ABangalore%20OR%20stateName%3ABangalore%20OR%20aliasCityName%3ABangalore&rows=10&sort=weightage%20desc
 
 app.get('/update/:cityCode', (req, res) => {
