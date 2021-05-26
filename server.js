@@ -43,7 +43,7 @@ function cache(req,res,next){
     if(data!=null){
       console.log('Cached...');
       res.setHeader('Content-Type', 'application/json');
-      res.send(JSON.parse(data));
+      res.send(JSON.stringify(JSON.parse(data),"",4));
     }
     else{
       next();
@@ -74,7 +74,7 @@ app.get('/', cache, (req, res) => {
         // console.log("spell check link: "+spellchecklink);
         request.get(spellchecklink,function(error,response,body){
           if(error) throw error;
-          res.send(body);
+          res.send(JSON.stringify(JSON.parse(body).spellcheck,"",4));
          // res.end();
          var suggObj = JSON.parse(body);
         // console.log(suggObj.spellcheck.suggestions[1].suggestion[0]);
@@ -86,12 +86,12 @@ app.get('/', cache, (req, res) => {
         }
         });
       }else{
-        var cache_value = JSON.stringify(body);
+        var cache_value = JSON.stringify(JSON.parse(body).response.docs);
         // console.log(cache_value);
         red_client.setex(qcity,3600,cache_value);
-        // console.log(JSON.parse(JSON.stringify(body)));
+        // console.log(body);
         res.setHeader('Content-Type', 'application/json');
-        res.end(body);
+        res.send(JSON.stringify(JSON.parse(body).response.docs,"",4));
       }
     });
   }else{
