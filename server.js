@@ -43,20 +43,7 @@ mongoose.connect(process.env.database, {useNewUrlParser: true, connectWithNoPrim
   
 app.get('/test/:id/:st', (req,res) => {
   console.log('Here');
-  client.add({ id : req.params.id , title_t : req.params.st }, function(err,obj){
-    if (err) {
-       console.log(err);
-    } else {
-       res.send('Solr response:', obj);
-       client.softCommit(function(err,res){
-        if(err){
-          console.log(err);
-        }else{
-          console.log(res);
-        }
-     });
-    }
-  });
+ 
   
 });
 
@@ -76,7 +63,7 @@ app.get('/', (req, res) => {
 });
 // http://localhost:8983/solr/citydata/select?q=cityName%3ABangalore%20OR%20stateName%3ABangalore%20OR%20aliasCityName%3ABangalore&rows=10&sort=weightage%20desc
 
-app.get('/update/:cityCode', (req, res) => {
+app.get('/update/:cityCode/', (req, res) => {
   cityData.findOne({cityCode : req.params.cityCode}, (err, city) => {
     if(city){
       if(req.query.cityName)
@@ -91,6 +78,24 @@ app.get('/update/:cityCode', (req, res) => {
         city.weightage = parseInt(req.query.weightage);
       city.save((err) => {
         if(err) throw err;
+        else{
+          // implement update call
+          client.add({ cityCode : city.cityCode, cityName : city.cityName,  stateName : city.stateName, locationType : city.locationType, aliasCityName : city.aliasCityName, weightage : city.weightage }, function(err,obj){
+            if (err) {
+               console.log(err);
+            } else {
+               res.send(obj);
+               console.log(obj);
+               client.softCommit(function(err,res){
+                if(err){
+                  console.log(err);
+                }else{
+                  console.log(res);
+                }
+             });
+            }
+          });
+        }
       });
       
       }
